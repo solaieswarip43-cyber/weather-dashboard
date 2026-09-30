@@ -1,35 +1,61 @@
-async function loadProjects() {
-  const container = document.getElementById("project-list");
+const apiKey = 'YOUR_API_KEY_HERE'; // Unga OpenWeatherMap API Key-a inge paste pannunga
+const searchBtn = document.getElementById('search-btn');
+const cityInput = document.getElementById('city-input');
 
-  try {
-    const response = await fetch("/api/projects");
-    const projects = await response.json();
+const weatherInfo = document.getElementById('weather-info');
+const errorMsg = document.getElementById('error-msg');
 
-    container.innerHTML = projects.map(project => `
-      <article class="project-card">
-        <h3>${escapeHtml(project.title)}</h3>
-        <p>${escapeHtml(project.description)}</p>
-        <p class="tech">${escapeHtml(project.tech)}</p>
-        <a class="btn" href="${escapeAttr(project.link)}" target="_blank">View Project</a>
-      </article>
-    `).join("");
-  } catch (error) {
-    container.innerHTML = "<p>Unable to load projects.</p>";
-  }
+const cityName = document.getElementById('city-name');
+const weatherDesc = document.getElementById('weather-desc');
+const temp = document.getElementById('temp');
+const humidity = document.getElementById('humidity');
+const wind = document.getElementById('wind');
+
+async function fetchWeather(city) {
+    if (!city) return;
+
+    try {
+        errorMsg.classList.add('hidden');
+        weatherInfo.classList.add('hidden');
+
+        const response = await fetch(
+            `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(city)}&appid=${apiKey}&units=metric`
+        );
+
+        if (!response.ok) {
+            throw new Error('City not found. Please try again.');
+        }
+
+        const data = await response.json();
+        displayWeather(data);
+    } catch (err) {
+        showError(err.message);
+    }
 }
 
-function escapeHtml(value) {
-  return String(value).replace(/[&<>"']/g, char => ({
-    "&": "&amp;",
-    "<": "&lt;",
-    ">": "&gt;",
-    '"': "&quot;",
-    "'": "&#039;"
-  }[char]));
+function displayWeather(data) {
+    cityName.textContent = `${data.name}, ${data.sys.country}`;
+    weatherDesc.textContent = data.weather[0].description;
+    temp.textContent = Math.round(data.main.temp);
+    humidity.textContent = data.main.humidity;
+    wind.textContent = data.wind.speed;
+
+    weatherInfo.classList.remove('hidden');
 }
 
-function escapeAttr(value) {
-  return escapeHtml(value);
+function showError(message) {
+    errorMsg.textContent = message;
+    errorMsg.classList.remove('hidden');
 }
 
-loadProjects();
+searchBtn.addEventListener('click', () => {
+    const city = cityInput.value.trim();
+    fetchWeather(city);
+});
+
+cityInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+        const city = cityInput.value.trim();
+        fetchWeather(city);
+    }
+});
